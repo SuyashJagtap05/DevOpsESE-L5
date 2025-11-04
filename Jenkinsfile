@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+
+    environment {
+        KUBECONFIG = credentials('kubeconfig-cred')  // Jenkins credential ID for kubeconfig
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Set Environment') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'dev') {
+                        DEPLOY_ENV = 'dev'
+                    } else if (env.BRANCH_NAME == 'prod') {
+                        DEPLOY_ENV = 'prod'
+                    } else {
+                        error "Unsupported branch: ${env.BRANCH_NAME}"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh "bash scripts/deploy.sh ${DEPLOY_ENV}"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment successful for ${env.BRANCH_NAME} branch"
+        }
+        failure {
+            echo "Deployment failed!"
+        }
+    }
+}
